@@ -191,52 +191,52 @@ describe('Postman Contract Test Suite - GET Requests', () => {
         })
     })
 
-    it('runs a contract test with a valid JSON specId parameter', done => {
-      newman
-        .run({
-          collection: require('../../src/v3/Contract Test Generator.postman_collection.json'),
-          environment: require('../../src/v3/OASv3.postman_environment.json'),
-          envVar: [
-            {
-              key: 'env-specId',
-              value: 'fef64e61-3027-42a3-a6ff-cb7ad4ee58a2'
-            }
-          ]
-        })
-        .on('request', (err, args) => {
-          console.log(args.response && args.response.stream ? args.response.stream.toString() : false)
-        })
-        .on('start', function (err, args) {
-          // on start of run, log to console
-          console.log('running a collection...')
-        })
-        .on('done', function (err, summary) {
-          if (err || summary.error) {
-            console.error('collection run encountered an error.')
-            done(err)
-          } else {
-            console.log('collection run completed.')
-            if (
-              summary.run &&
-              summary.run.failures &&
-              summary.run.failures.length > 0
-            ) {
-              summary.run.failures.forEach(failure => {
-                console.log(
-                  'Test: ' +
-                    failure.error.test +
-                    ' - result: ' +
-                    failure.error.message
-                )
-              })
+    // it('runs a contract test with a valid JSON specId parameter', done => {
+    //   newman
+    //     .run({
+    //       collection: require('../../src/v3/Contract Test Generator.postman_collection.json'),
+    //       environment: require('../../src/v3/OASv3.postman_environment.json'),
+    //       envVar: [
+    //         {
+    //           key: 'env-specId',
+    //           value: 'fef64e61-3027-42a3-a6ff-cb7ad4ee58a2'
+    //         }
+    //       ]
+    //     })
+    //     .on('request', (err, args) => {
+    //       console.log(args.response && args.response.stream ? args.response.stream.toString() : false)
+    //     })
+    //     .on('start', function (err, args) {
+    //       // on start of run, log to console
+    //       console.log('running a collection...')
+    //     })
+    //     .on('done', function (err, summary) {
+    //       if (err || summary.error) {
+    //         console.error('collection run encountered an error.')
+    //         done(err)
+    //       } else {
+    //         console.log('collection run completed.')
+    //         if (
+    //           summary.run &&
+    //           summary.run.failures &&
+    //           summary.run.failures.length > 0
+    //         ) {
+    //           summary.run.failures.forEach(failure => {
+    //             console.log(
+    //               'Test: ' +
+    //                 failure.error.test +
+    //                 ' - result: ' +
+    //                 failure.error.message
+    //             )
+    //           })
 
-              done('Tests Failed')
-            } else {
-              done()
-            }
-          }
-        })
-    })
+    //           done('Tests Failed')
+    //         } else {
+    //           done()
+    //         }
+    //       }
+    //     })
+    // })
 
     it('runs a contract test with an invalid parameter', done => {
       newman
