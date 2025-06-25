@@ -76,7 +76,7 @@
 											"const providedSchemaUrl = pm.environment.get('env-schemaUrl');\r",
 											"\r",
 											"if(providedSchemaUrl) {\r",
-											"    postman.setNextRequest(\"Get Schema From URL\");\r",
+											"    pm.execution.setNextRequest(\"Get Schema From URL\");\r",
 											"} else if(providedSchema) {\r",
 											"    let success = true;\r",
 											"    try{\r",
@@ -85,22 +85,29 @@
 											"\r",
 											"        const schema = jsyaml.load(providedSchema);\r",
 											"        pm.collectionVariables.set('coll-schema', JSON.stringify(schema));\r",
-											"        postman.setNextRequest('Get API Base Url');\r",
+											"        pm.execution.setNextRequest('Get API Base Url');\r",
 											"    }\r",
 											"    catch(err){\r",
 											"        console.log(err);\r",
 											"        success = false;\r",
-											"        postman.setNextRequest(null);\r",
+											"        pm.execution.setNextRequest(null);\r",
 											"    }\r",
 											"\r",
 											"    pm.test('Successfully converted provided schema', function(){\r",
 											"        pm.expect(success).to.be.true;\r",
 											"    });    \r",
+											"} else if(pm.environment.get('env-apiId') != null && pm.environment.get('env-apiId') != \"\") {\r",
+											"    pm.execution.setNextRequest(\"Validate API In Workspace\");\r",
+											"} else if(pm.environment.get('env-specId') != null && pm.environment.get('env-specId') != \"\") {\r",
+											"    pm.execution.setNextRequest(\"Validate Spec In Workspace\");\r",
 											"} else {\r",
-											"    postman.setNextRequest(\"Validate API In Workspace\");\r",
+											"    console.log(\"No schema or API/Spec ID provided. Skipping schema validation.\");\r",
+											"    success = false;\r",
+											"    pm.execution.setNextRequest(null);\r",
 											"}"
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								}
 							],
@@ -181,7 +188,7 @@
 					]
 				},
 				{
-					"name": "Get Schema from Postman",
+					"name": "Get Schema from API Builder",
 					"item": [
 						{
 							"name": "Validate API In Workspace",
@@ -401,7 +408,8 @@
 											"    pm.collectionVariables.set('coll-schemaId', jsonData.schemas[0].id);\r",
 											"});"
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								},
 								{
@@ -410,7 +418,8 @@
 										"exec": [
 											""
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								}
 							],
@@ -476,7 +485,7 @@
 											"\r",
 											"if (code == 422) {\r",
 											"    //Git linked API - use fallback instead.\r",
-											"    postman.setNextRequest(\"Get API Schema (v9 fallback)\");\r",
+											"    pm.execution.setNextRequest(\"Get API Schema (v9 fallback)\");\r",
 											"} else {\r",
 											"\r",
 											"    try {\r",
@@ -487,12 +496,13 @@
 											"            pm.collectionVariables.set('coll-schema', jsonData.content);\r",
 											"        });\r",
 											"\r",
+											"        pm.execution.setNextRequest(\"Get API Base Url\");\r",
 											"    }\r",
 											"    catch (err) {\r",
 											"        console.log(err);\r",
 											"        pm.test('Unable to load schema', function () {\r",
 											"            pm.expect(0).to.equal(1);\r",
-											"            postman.setNextRequest(null);\r",
+											"            pm.execution.setNextRequest(null);\r",
 											"        })\r",
 											"    }\r",
 											"}\r",
@@ -637,6 +647,218 @@
 								}
 							},
 							"response": []
+						}
+					],
+					"auth": {
+						"type": "noauth"
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Schema from Spechub",
+					"item": [
+						{
+							"name": "Validate Spec In Workspace",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"//2025-06-25 - Added new environment variable for targeting Spec ID\r",
+											"let targetSpecId = pm.environment.get('env-specId');\r",
+											"\r",
+											"if(targetSpecId && targetSpecId != \"\") {\r",
+											"    //User has targeted at least 1 Spec in this workspace.\r",
+											"    targetSpecId = targetSpecId.trim();\r",
+											"\r",
+											"    //Validate that the Spec IDs provided exist in this workspace.\r",
+											"    let workspaceSpecIds = pm.response.json().data.map(spec => spec.id);\r",
+											"\r",
+											"    console.log(workspaceSpecIds);\r",
+											"\r",
+											"    pm.test(`Validate that Spec ${targetSpecId} exists in this workspace.`, function () {    \r",
+											"        pm.expect(workspaceSpecIds, \"Your env-specId variable includes an invalid API ID\").to.include(targetSpecId);\r",
+											"    });\r",
+											"}\r",
+											"\r",
+											"pm.collectionVariables.set('coll-specId', targetSpecId);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Api-Key",
+										"value": "{{env-apiKey}}"
+									},
+									{
+										"key": "Accept",
+										"value": "application/vnd.api.v10+json"
+									}
+								],
+								"url": {
+									"raw": "https://api.getpostman.com/specs?workspaceId={{env-workspaceId}}",
+									"protocol": "https",
+									"host": [
+										"api",
+										"getpostman",
+										"com"
+									],
+									"path": [
+										"specs"
+									],
+									"query": [
+										{
+											"key": "workspaceId",
+											"value": "{{env-workspaceId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Spec Definition",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"let colSchema = null;\r",
+											"\r",
+											"try {\r",
+											"    const yaml = pm.environment.get('env-jsonToYaml');\r",
+											"    (new Function(yaml))();\r",
+											"\r",
+											"    schema = jsyaml.load(pm.response.text());\r",
+											"    colSchema = JSON.stringify(schema);\r",
+											"    pm.execution.setNextRequest('Get API Base Url');\r",
+											"} catch (err) {\r",
+											"    console.log(\"Schema is likely to be in JSON format. Attempting that.\")\r",
+											"    console.log(err);\r",
+											"}\r",
+											"\r",
+											"if (!colSchema) {\r",
+											"    try {\r",
+											"        const jsonData = pm.response.json();\r",
+											"        pm.test('Schema is JSON', function () {\r",
+											"            pm.expect(jsonData).to.have.property(\"content\");\r",
+											"            pm.expect(jsonData.content).to.not.be.null;\r",
+											"\r",
+											"            colSchema = jsonData.content\r",
+											"        });\r",
+											"\r",
+											"    } catch (err) {\r",
+											"        console.log(err);\r",
+											"        pm.test('Unable to load schema', function () {\r",
+											"            pm.expect(0).to.equal(1);\r",
+											"        })\r",
+											"    }\r",
+											"}\r",
+											"\r",
+											"if (colSchema) {\r",
+											"    pm.collectionVariables.set('coll-schema', colSchema);\r",
+											"    pm.execution.setNextRequest(\"Get API Base Url\");\r",
+											"} else {\r",
+											"    pm.execution.setNextRequest(null);\r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Api-Key",
+										"value": "{{env-apiKey}}"
+									},
+									{
+										"key": "Accept",
+										"value": "application/vnd.api.v10+json"
+									}
+								],
+								"url": {
+									"raw": "https://api.getpostman.com/specs/:specId/definitions",
+									"protocol": "https",
+									"host": [
+										"api",
+										"getpostman",
+										"com"
+									],
+									"path": [
+										"specs",
+										":specId",
+										"definitions"
+									],
+									"variable": [
+										{
+											"key": "specId",
+											"value": "{{coll-specId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "noauth"
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
 						}
 					]
 				},
@@ -787,9 +1009,9 @@
 									"\r",
 									"const runContractTests = pm.environment.get('env-runContractTests') == 'true';\r",
 									"if (runContractTests) {\r",
-									"    postman.setNextRequest('Build Schema Tests');\r",
+									"    pm.execution.setNextRequest('Build Schema Tests');\r",
 									"} else {\r",
-									"    postman.setNextRequest('More APIs to Process?');\r",
+									"    pm.execution.setNextRequest('More APIs to Process?');\r",
 									"}\r",
 									"\r",
 									"\r",
@@ -915,7 +1137,8 @@
 									"}\r",
 									""
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						}
 					],
@@ -1401,19 +1624,20 @@
 									"\r",
 									"const schemaTest = JSON.parse(pm.variables.get('currentSchemaTest'));\r",
 									"\r",
-									"pm.test(`${schemaTest.name} - Has expected status code`, function () {\r",
+									"pm.test(`${schemaTest.name} - Has correct success or fail status code`, function () {\r",
 									"    if(schemaTest.success){\r",
 									"        pm.expect(pm.response.code).to.not.equal(400);\r",
 									"    }\r",
 									"    else {\r",
 									"        const statusCode = pm.response.code;\r",
+									"        console.log(`Status is: ${statusCode}`);\r",
 									"        pm.expect(statusCode === 400 || statusCode === 422).to.be.true;\r",
 									"    }    \r",
 									"});\r",
 									"\r",
 									"\r",
 									"const expectedResponse = schemaTest.responses.find(r => r.statusCode == pm.response.code);\r",
-									"pm.test(`${schemaTest.name} - Status code is allowed`, function(){\r",
+									"pm.test(`${schemaTest.name} - Provided status code is an allowed response for this endpoint`, function(){\r",
 									"    pm.expect(expectedResponse).to.exist;\r",
 									"});\r",
 									"\r",
