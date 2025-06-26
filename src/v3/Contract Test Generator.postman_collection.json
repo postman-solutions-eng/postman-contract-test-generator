@@ -23,18 +23,20 @@
 										"exec": [
 											"// See https://blog.postman.com/2019/05/28/pro-tip-dynamically-unset-postman-environment-variables/\r",
 											"// for more details on what we're doing here. \r",
+											"let lodash = require('lodash');\r",
 											"\r",
 											"cleanupCollectionVariables();\r",
 											"\r",
 											"function cleanupCollectionVariables() {\r",
-											"    const clean = _.keys(pm.collectionVariables.toObject());\r",
+											"    const clean = lodash.keys(pm.collectionVariables.toObject());\r",
 											"\r",
-											"    _.each(clean, (arrItem) => {\r",
+											"    lodash.each(clean, (arrItem) => {\r",
 											"        pm.collectionVariables.unset(arrItem);\r",
 											"    });\r",
 											"}"
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								},
 								{
@@ -43,7 +45,8 @@
 										"exec": [
 											""
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								}
 							],
@@ -76,7 +79,7 @@
 											"const providedSchemaUrl = pm.environment.get('env-schemaUrl');\r",
 											"\r",
 											"if(providedSchemaUrl) {\r",
-											"    postman.setNextRequest(\"Get Schema From URL\");\r",
+											"    pm.execution.setNextRequest(\"Get Schema From URL\");\r",
 											"} else if(providedSchema) {\r",
 											"    let success = true;\r",
 											"    try{\r",
@@ -85,22 +88,29 @@
 											"\r",
 											"        const schema = jsyaml.load(providedSchema);\r",
 											"        pm.collectionVariables.set('coll-schema', JSON.stringify(schema));\r",
-											"        postman.setNextRequest('Get API Base Url');\r",
+											"        pm.execution.setNextRequest('Get API Base Url');\r",
 											"    }\r",
 											"    catch(err){\r",
 											"        console.log(err);\r",
 											"        success = false;\r",
-											"        postman.setNextRequest(null);\r",
+											"        pm.execution.setNextRequest(null);\r",
 											"    }\r",
 											"\r",
 											"    pm.test('Successfully converted provided schema', function(){\r",
 											"        pm.expect(success).to.be.true;\r",
 											"    });    \r",
+											"} else if(pm.environment.get('env-apiId') != null && pm.environment.get('env-apiId') != \"\") {\r",
+											"    pm.execution.setNextRequest(\"Validate API In Workspace\");\r",
+											"} else if(pm.environment.get('env-specId') != null && pm.environment.get('env-specId') != \"\") {\r",
+											"    pm.execution.setNextRequest(\"Validate Spec In Workspace\");\r",
 											"} else {\r",
-											"    postman.setNextRequest(\"Validate API In Workspace\");\r",
+											"    console.log(\"No schema or API/Spec ID provided. Skipping schema validation.\");\r",
+											"    success = false;\r",
+											"    pm.execution.setNextRequest(null);\r",
 											"}"
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								}
 							],
@@ -144,12 +154,12 @@
 											"",
 											"        const schema = jsyaml.load(responseSchema);",
 											"        pm.collectionVariables.set('coll-schema', JSON.stringify(schema));",
-											"        postman.setNextRequest('Get API Base Url');",
+											"        pm.execution.setNextRequest('Get API Base Url');",
 											"    }",
 											"    catch(err){",
 											"        console.log(err);",
 											"        success = false;",
-											"        postman.setNextRequest(null);",
+											"        pm.execution.setNextRequest(null);",
 											"    }",
 											"",
 											"    pm.test('Successfully converted provided schema', function(){",
@@ -157,12 +167,13 @@
 											"    }); ",
 											"} else {",
 											"    console.log(\"Error retrieving schema from URL - \" + pm.environment.get(\"env-schemaUrl\"));",
-											"    postman.setNextRequest(null);",
+											"    pm.execution.setNextRequest(null);",
 											"}",
 											"",
 											""
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								}
 							],
@@ -181,7 +192,7 @@
 					]
 				},
 				{
-					"name": "Get Schema from Postman",
+					"name": "Get Schema from API Builder",
 					"item": [
 						{
 							"name": "Validate API In Workspace",
@@ -190,6 +201,8 @@
 									"listen": "test",
 									"script": {
 										"exec": [
+											"let lodash = require('lodash');\r",
+											"\r",
 											"//2024-06-07 - Added new environment variable for targeting specific API ID\r",
 											"let targetApiId = pm.environment.get('env-apiId');\r",
 											"let apiIds = [];\r",
@@ -223,7 +236,7 @@
 											"        pm.expect(jsonData.apis.length).to.be.at.most(maxApiCount);\r",
 											"    });\r",
 											"    \r",
-											"    _.forEach(jsonData.apis, function(api){\r",
+											"    lodash.forEach(jsonData.apis, function(api){\r",
 											"        apiIds.push(api.id);\r",
 											"    });\r",
 											"}\r",
@@ -297,19 +310,19 @@
 											"\r",
 											"if(apiId && apiDefinitionId && apiId != \"\" && apiDefinitionId != \"\") {\r",
 											"    pm.collectionVariables.set(\"coll-schemaId\", apiDefinitionId);\r",
-											"    postman.setNextRequest(\"Get API Schema\");\r",
+											"    pm.execution.setNextRequest(\"Get API Schema\");\r",
 											"}\r",
 											"\r",
 											"pm.test(\"API must have at least 1 version published or a definitionId provided.\", function() {\r",
-											"    postman.setNextRequest(null);\r",
+											"    pm.execution.setNextRequest(null);\r",
 											"    pm.expect(latestVersionId || apiDefinitionId, \"API does not have a published version, and no definitionId is available in the environment\").to.have.length.greaterThan(1);\r",
 											"    \r",
 											"    console.log(apiDefinitionId)\r",
 											"\r",
 											"    if (apiDefinitionId) {\r",
-											"        postman.setNextRequest(\"Get API Schema\")\r",
+											"        pm.execution.setNextRequest(\"Get API Schema\")\r",
 											"    } else if(latestVersionId) {\r",
-											"        postman.setNextRequest(\"Get Current API Schema\");\r",
+											"        pm.execution.setNextRequest(\"Get Current API Schema\");\r",
 											"    }\r",
 											"})"
 										],
@@ -332,7 +345,7 @@
 											"else {\r",
 											"    pm.request.url = 'https://postman-echo.com/delay/0'\r",
 											"    pm.request.name = 'No APIs found in the workspace. Skipping execution';\r",
-											"    postman.setNextRequest(null);\r",
+											"    pm.execution.setNextRequest(null);\r",
 											"}"
 										],
 										"type": "text/javascript",
@@ -401,7 +414,8 @@
 											"    pm.collectionVariables.set('coll-schemaId', jsonData.schemas[0].id);\r",
 											"});"
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								},
 								{
@@ -410,7 +424,8 @@
 										"exec": [
 											""
 										],
-										"type": "text/javascript"
+										"type": "text/javascript",
+										"packages": {}
 									}
 								}
 							],
@@ -476,7 +491,7 @@
 											"\r",
 											"if (code == 422) {\r",
 											"    //Git linked API - use fallback instead.\r",
-											"    postman.setNextRequest(\"Get API Schema (v9 fallback)\");\r",
+											"    pm.execution.setNextRequest(\"Get API Schema (v9 fallback)\");\r",
 											"} else {\r",
 											"\r",
 											"    try {\r",
@@ -487,12 +502,13 @@
 											"            pm.collectionVariables.set('coll-schema', jsonData.content);\r",
 											"        });\r",
 											"\r",
+											"        pm.execution.setNextRequest(\"Get API Base Url\");\r",
 											"    }\r",
 											"    catch (err) {\r",
 											"        console.log(err);\r",
 											"        pm.test('Unable to load schema', function () {\r",
 											"            pm.expect(0).to.equal(1);\r",
-											"            postman.setNextRequest(null);\r",
+											"            pm.execution.setNextRequest(null);\r",
 											"        })\r",
 											"    }\r",
 											"}\r",
@@ -638,6 +654,214 @@
 							},
 							"response": []
 						}
+					],
+					"auth": {
+						"type": "noauth"
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Schema from Spechub",
+					"item": [
+						{
+							"name": "Validate Spec In Workspace",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"//2025-06-25 - Added new environment variable for targeting Spec ID\r",
+											"let targetSpecId = pm.environment.get('env-specId');\r",
+											"\r",
+											"if(targetSpecId && targetSpecId != \"\") {\r",
+											"    //User has targeted at least 1 Spec in this workspace.\r",
+											"    targetSpecId = targetSpecId.trim();\r",
+											"\r",
+											"    //Validate that the Spec IDs provided exist in this workspace.\r",
+											"    let workspaceSpecIds = pm.response.json().data.map(spec => spec.id);\r",
+											"\r",
+											"    console.log(workspaceSpecIds);\r",
+											"\r",
+											"    pm.test(`Validate that Spec ${targetSpecId} exists in this workspace.`, function () {    \r",
+											"        pm.expect(workspaceSpecIds, \"Your env-specId variable includes an invalid API ID\").to.include(targetSpecId);\r",
+											"    });\r",
+											"}\r",
+											"\r",
+											"pm.collectionVariables.set('coll-specId', targetSpecId);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Api-Key",
+										"value": "{{env-apiKey}}"
+									},
+									{
+										"key": "Accept",
+										"value": "application/vnd.api.v10+json"
+									}
+								],
+								"url": {
+									"raw": "https://api.getpostman.com/specs?workspaceId={{env-workspaceId}}",
+									"protocol": "https",
+									"host": [
+										"api",
+										"getpostman",
+										"com"
+									],
+									"path": [
+										"specs"
+									],
+									"query": [
+										{
+											"key": "workspaceId",
+											"value": "{{env-workspaceId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Spec Definition",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"let colSchema = null;\r",
+											"\r",
+											"try {\r",
+											"    const jsonData = pm.response.json();\r",
+											"    pm.test('Schema is JSON', function () {\r",
+											"        pm.expect(jsonData).to.have.property(\"content\");\r",
+											"        pm.expect(jsonData.content).to.not.be.null;\r",
+											"\r",
+											"        colSchema = jsonData.content\r",
+											"    });\r",
+											"\r",
+											"} catch (err) {\r",
+											"    console.log(\"Unable to load definition in JSON format, trying YAML\");\r",
+											"}\r",
+											"\r",
+											"if (!colSchema) {\r",
+											"    try {\r",
+											"        const yaml = pm.environment.get('env-jsonToYaml');\r",
+											"        (new Function(yaml))();\r",
+											"\r",
+											"        schema = jsyaml.load(pm.response.text());\r",
+											"        colSchema = JSON.stringify(schema);\r",
+											"    } catch (err) {\r",
+											"        console.log(err);\r",
+											"    }\r",
+											"}\r",
+											"\r",
+											"if (colSchema) {\r",
+											"    pm.collectionVariables.set('coll-schema', colSchema);\r",
+											"    pm.execution.setNextRequest(\"Get API Base Url\");\r",
+											"} else {\r",
+											"    pm.execution.setNextRequest(null);\r",
+											"}\r",
+											"\r",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Api-Key",
+										"value": "{{env-apiKey}}"
+									},
+									{
+										"key": "Accept",
+										"value": "application/vnd.api.v10+json"
+									}
+								],
+								"url": {
+									"raw": "https://api.getpostman.com/specs/:specId/definitions",
+									"protocol": "https",
+									"host": [
+										"api",
+										"getpostman",
+										"com"
+									],
+									"path": [
+										"specs",
+										":specId",
+										"definitions"
+									],
+									"variable": [
+										{
+											"key": "specId",
+											"value": "{{coll-specId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "noauth"
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"exec": [
+									""
+								]
+							}
+						}
 					]
 				},
 				{
@@ -711,6 +935,8 @@
 							"listen": "test",
 							"script": {
 								"exec": [
+									"let lodash = require('lodash');\r",
+									"\r",
 									"const schema = JSON.parse(pm.collectionVariables.get('coll-schema'));\r",
 									"\r",
 									"const requireParamDescription = Boolean(pm.environment.get('env-requireParamDescription'));\r",
@@ -787,9 +1013,9 @@
 									"\r",
 									"const runContractTests = pm.environment.get('env-runContractTests') == 'true';\r",
 									"if (runContractTests) {\r",
-									"    postman.setNextRequest('Build Schema Tests');\r",
+									"    pm.execution.setNextRequest('Build Schema Tests');\r",
 									"} else {\r",
-									"    postman.setNextRequest('More APIs to Process?');\r",
+									"    pm.execution.setNextRequest('More APIs to Process?');\r",
 									"}\r",
 									"\r",
 									"\r",
@@ -825,17 +1051,17 @@
 									"                testSchemaObject(schema, property, `${objectName}.${prop}(list)`);\r",
 									"            }\r",
 									"            else if (property.oneOf) {\r",
-									"                _.forEach(property.oneOf, (oneOf, i) => {\r",
+									"                lodash.forEach(property.oneOf, (oneOf, i) => {\r",
 									"                    testSchemaObject(schema, oneOf, `${objectName}.${prop}(oneOf).${i}`)\r",
 									"                });\r",
 									"            }\r",
 									"            else if (property.allOf) {\r",
-									"                _.forEach(property.allOf, (allOf, i) => {\r",
+									"                lodash.forEach(property.allOf, (allOf, i) => {\r",
 									"                    testSchemaObject(schema, allOf, `${objectName}.${prop}(allOf).${i}`)\r",
 									"                });\r",
 									"            }\r",
 									"            else if (property.anyOf) {\r",
-									"                _.forEach(property.anyOf, (anyOf, i) => {\r",
+									"                lodash.forEach(property.anyOf, (anyOf, i) => {\r",
 									"                    testSchemaObject(schema, anyOf, `${objectName}.${prop}(anyOf).${i}`)\r",
 									"                });\r",
 									"            }\r",
@@ -915,7 +1141,8 @@
 									"}\r",
 									""
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						}
 					],
@@ -952,6 +1179,8 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
+									"let lodash = require('lodash');\r",
+									"\r",
 									"const schema = JSON.parse(pm.collectionVariables.get('coll-schema'));\r",
 									"\r",
 									"let schemaTests = [];\r",
@@ -967,7 +1196,7 @@
 									"            continue;\r",
 									"        }\r",
 									"\r",
-									"        let currentPath = _.cloneDeep(path);\r",
+									"        let currentPath = lodash.cloneDeep(path);\r",
 									"        currentPath.method = method.toUpperCase();\r",
 									"        let pathMethod = schema.paths[prop][method];\r",
 									"        let securityExtension = pm.environment.get('env-securityExtensionName');\r",
@@ -1002,7 +1231,7 @@
 									"            const mutations = buildModelMutations(models);\r",
 									"\r",
 									"            mutations.forEach((mutation) => {\r",
-									"                let schemaTest = _.cloneDeep(currentPath);\r",
+									"                let schemaTest = lodash.cloneDeep(currentPath);\r",
 									"                Object.assign(schemaTest, mutation);\r",
 									"                schemaTest.name = `${schemaTest.method} - ${pathName} - ${schemaTest.description} - SUCCESS: ${schemaTest.success}`;\r",
 									"                schemaTests.push(schemaTest);\r",
@@ -1031,18 +1260,20 @@
 									"    if (object.type && object.type.toLowerCase() == 'object') {\r",
 									"        if (object.required && object.required.length > 0) {\r",
 									"            models.push({});\r",
-									"            _.forEach(object.required, function (param) {\r",
+									"            lodash.forEach(object.required, function (param) {\r",
 									"                const property = object.properties[param];\r",
 									"\r",
-									"                if (property.type && ['string', 'number', 'integer', 'boolean'].includes(property.type.toLowerCase())) {\r",
-									"                    for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {\r",
-									"                        let model = models[modelIndex];\r",
-									"                        model[param] = property.example;\r",
+									"                if (property) {\r",
+									"                    if (property.type && ['string', 'number', 'integer', 'boolean'].includes(property.type.toLowerCase())) {\r",
+									"                        for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {\r",
+									"                            let model = models[modelIndex];\r",
+									"                            model[param] = property.example;\r",
+									"                        }\r",
 									"                    }\r",
-									"                }\r",
-									"                else {\r",
-									"                    const nestedObjects = buildModels(schema, property);\r",
-									"                    models = addToModels(models, nestedObjects, param);\r",
+									"                    else {\r",
+									"                        const nestedObjects = buildModels(schema, property);\r",
+									"                        models = addToModels(models, nestedObjects, param);\r",
+									"                    }\r",
 									"                }\r",
 									"            });\r",
 									"        }\r",
@@ -1059,14 +1290,14 @@
 									"        }\r",
 									"    }\r",
 									"    else if (object.oneOf) {\r",
-									"        _.forEach(object.oneOf, function (component) {\r",
+									"        lodash.forEach(object.oneOf, function (component) {\r",
 									"            let items = buildModels(schema, component);\r",
 									"            models = models.concat(items);\r",
 									"        });\r",
 									"    }\r",
 									"    else if (object.allOf) {\r",
 									"        let pieces = [{}];\r",
-									"        _.forEach(object.allOf, function (component) {\r",
+									"        lodash.forEach(object.allOf, function (component) {\r",
 									"            let componentModels = buildModels(schema, component);\r",
 									"            pieces = addToModels(pieces, componentModels);\r",
 									"        });\r",
@@ -1076,7 +1307,7 @@
 									"    else if (object.anyOf) {\r",
 									"        let pieces = [];\r",
 									"        let combinedPieces = [{}];\r",
-									"        _.forEach(object.anyOf, function (component) {\r",
+									"        lodash.forEach(object.anyOf, function (component) {\r",
 									"            let componentModels = buildModels(schema, component);\r",
 									"            combinedPieces = addToModels(combinedPieces, componentModels);\r",
 									"            pieces = pieces.concat(componentModels);\r",
@@ -1103,9 +1334,9 @@
 									"\r",
 									"function addToModels(models, newPieces, name) {\r",
 									"    let newModels = [];\r",
-									"    _.forEach(models, function (model) {\r",
-									"        _.forEach(newPieces, function (newPiece) {\r",
-									"            let newModel = _.cloneDeep(model);\r",
+									"    lodash.forEach(models, function (model) {\r",
+									"        lodash.forEach(newPieces, function (newPiece) {\r",
+									"            let newModel = lodash.cloneDeep(model);\r",
 									"            if (name) {\r",
 									"                newModel[name] = newPiece;\r",
 									"            }\r",
@@ -1121,7 +1352,7 @@
 									"\r",
 									"function buildModelMutations(models) {\r",
 									"    let modelMutations = [];\r",
-									"    _.forEach(models, function (model) {\r",
+									"    lodash.forEach(models, function (model) {\r",
 									"        addMutation(true, 'Has all required fields', model, modelMutations);\r",
 									"        let mutations = buildMutation(model);\r",
 									"        modelMutations = modelMutations.concat(mutations);\r",
@@ -1137,16 +1368,16 @@
 									"        if (typeof value == 'object') {\r",
 									"            let nestedMutations = buildMutation(value);\r",
 									"            nestedMutations.forEach((nestedMutation) => {\r",
-									"                let mutation = _.cloneDeep(model);\r",
+									"                let mutation = lodash.cloneDeep(model);\r",
 									"                mutation[key] = nestedMutation.body;\r",
 									"                addMutation(false, `${nestedMutation.description} in ${key} object`, mutation, mutations);\r",
 									"            });\r",
 									"\r",
-									"            let mutation = _.cloneDeep(model);\r",
+									"            let mutation = lodash.cloneDeep(model);\r",
 									"            delete mutation[key];\r",
 									"            addMutation(false, `Missing ${key} object`, mutation, mutations);\r",
 									"\r",
-									"            let emptyMutation = _.cloneDeep(model);\r",
+									"            let emptyMutation = lodash.cloneDeep(model);\r",
 									"            emptyMutation[key] = {};\r",
 									"            addMutation(false, `Empty ${key} object`, emptyMutation, mutations);\r",
 									"        }\r",
@@ -1163,13 +1394,13 @@
 									"             * - boolean\r",
 									"             **/\r",
 									"\r",
-									"            if(typeof model[key] == \"string\") {\r",
-									"                let blankMutation = _.cloneDeep(model);\r",
+									"            if (typeof model[key] == \"string\") {\r",
+									"                let blankMutation = lodash.cloneDeep(model);\r",
 									"                blankMutation[key] = '';\r",
 									"                addMutation(false, `Blank ${key} property`, blankMutation, mutations);\r",
 									"            }\r",
 									"\r",
-									"            let mutation = _.cloneDeep(model);\r",
+									"            let mutation = lodash.cloneDeep(model);\r",
 									"            delete mutation[key];\r",
 									"            addMutation(false, `Missing ${key} property`, mutation, mutations);\r",
 									"        }\r",
@@ -1238,7 +1469,7 @@
 									"if(schemaTests){\r",
 									"    schemaTests = JSON.parse(schemaTests);\r",
 									"    if(!schemaTests || !schemaTests.length){\r",
-									"        postman.setNextRequest('More APIs to Process?');\r",
+									"        pm.execution.setNextRequest('More APIs to Process?');\r",
 									"    }\r",
 									"}"
 								],
@@ -1275,6 +1506,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
+									"let lodash = require('lodash'); // lodash is available in the pre-request script environment.\r",
 									"const url = require('url');\r",
 									"\r",
 									"const schema = JSON.parse(pm.collectionVariables.get('coll-schema'));\r",
@@ -1353,9 +1585,9 @@
 									"    let replacedPathName = pathName;\r",
 									"    let pathVariableRegex = /{([^}]*)}/g;\r",
 									"    let matches = pathName.match(pathVariableRegex);\r",
-									"    _.forEach(matches, function(match){\r",
+									"    lodash.forEach(matches, function(match){\r",
 									"        let paramName = match.substring(1, match.length - 1);\r",
-									"        _.forEach(parameters, function(param){\r",
+									"        lodash.forEach(parameters, function(param){\r",
 									"            if(param.$ref){\r",
 									"                let parameter = getSchemaReference(schema, param.$ref);                \r",
 									"                if (parameter.in && parameter.in.toLowerCase() == 'path' && parameter.name && parameter.name == paramName){\r",
@@ -1394,26 +1626,29 @@
 							"listen": "test",
 							"script": {
 								"exec": [
+									"let lodash = require('lodash');\r",
+									"\r",
 									"const schemaTests = JSON.parse(pm.collectionVariables.get('coll-schemaTests'));\r",
 									"if(schemaTests.length > 0){\r",
-									"    postman.setNextRequest('Test Request');\r",
+									"    pm.execution.setNextRequest('Test Request');\r",
 									"}\r",
 									"\r",
 									"const schemaTest = JSON.parse(pm.variables.get('currentSchemaTest'));\r",
 									"\r",
-									"pm.test(`${schemaTest.name} - Has expected status code`, function () {\r",
+									"pm.test(`${schemaTest.name} - Has correct success or failure status code`, function () {\r",
 									"    if(schemaTest.success){\r",
 									"        pm.expect(pm.response.code).to.not.equal(400);\r",
 									"    }\r",
 									"    else {\r",
 									"        const statusCode = pm.response.code;\r",
+									"        console.log(`Status is: ${statusCode}`);\r",
 									"        pm.expect(statusCode === 400 || statusCode === 422).to.be.true;\r",
 									"    }    \r",
 									"});\r",
 									"\r",
 									"\r",
 									"const expectedResponse = schemaTest.responses.find(r => r.statusCode == pm.response.code);\r",
-									"pm.test(`${schemaTest.name} - Status code is allowed`, function(){\r",
+									"pm.test(`${schemaTest.name} - Provided status code is an allowed response for this endpoint`, function(){\r",
 									"    pm.expect(expectedResponse).to.exist;\r",
 									"});\r",
 									"\r",
@@ -1465,11 +1700,11 @@
 									"\r",
 									"        if(expectedResponse.variables){\r",
 									"            const jsonData = pm.response.json();\r",
-									"            _.forEach(expectedResponse.variables, function(variable){\r",
+									"            lodash.forEach(expectedResponse.variables, function(variable){\r",
 									"                let pathPieces = variable.path.split('.').filter(piece => piece);\r",
 									"                let data = jsonData;\r",
 									"                let found = true;\r",
-									"                _.forEach(pathPieces, function(piece){\r",
+									"                lodash.forEach(pathPieces, function(piece){\r",
 									"                    if(data[piece]){\r",
 									"                        data = data[piece];\r",
 									"                    }\r",
@@ -1578,13 +1813,14 @@
 									"    try{\r",
 									"        apis = JSON.parse(apis);\r",
 									"        if(apis.length > 0){\r",
-									"            postman.setNextRequest('Get Current API Version');\r",
+									"            pm.execution.setNextRequest('Get Current API Version');\r",
 									"        }\r",
 									"    }\r",
 									"    catch(err){}    \r",
 									"}"
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						}
 					],
@@ -1618,18 +1854,20 @@
 								"exec": [
 									"// See https://blog.postman.com/2019/05/28/pro-tip-dynamically-unset-postman-environment-variables/\r",
 									"// for more details on what we're doing here. \r",
+									"let lodash = require('lodash'); // lodash is available in the pre-request script\r",
 									"\r",
 									"cleanupCollectionVariables();\r",
 									"\r",
 									"function cleanupCollectionVariables() {\r",
-									"    const clean = _.keys(pm.collectionVariables.toObject());\r",
+									"    const clean = lodash.keys(pm.collectionVariables.toObject());\r",
 									"\r",
-									"    _.each(clean, (arrItem) => {\r",
+									"    lodash.each(clean, (arrItem) => {\r",
 									"        pm.collectionVariables.unset(arrItem);\r",
 									"    });\r",
 									"}"
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						},
 						{
@@ -1638,7 +1876,8 @@
 								"exec": [
 									""
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						}
 					],
